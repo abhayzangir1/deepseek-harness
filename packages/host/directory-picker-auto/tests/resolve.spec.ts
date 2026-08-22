@@ -42,8 +42,14 @@ describe('resolveDirectoryPickerBackend', () => {
     expect(resolveDirectoryPickerBackend({ ...attended, platform: 'openbsd', env: { WAYLAND_DISPLAY: 'wayland-1' } })).toBe('browse')
   })
 
+  it('honors an explicit DSH_DIRECTORY_PICKER override', () => {
+    expect(resolveDirectoryPickerBackend({ ...attended, env: { DSH_DIRECTORY_PICKER: 'browse' } })).toBe('browse')
+    expect(resolveDirectoryPickerBackend({ ...attended, bindHost: '0.0.0.0', env: { DSH_DIRECTORY_PICKER: 'native' } })).toBe('native')
+    expect(resolveDirectoryPickerBackend({ ...attended, env: { DSH_DIRECTORY_PICKER: ' BROWSE ' } })).toBe('browse')
+  })
+
   it('treats blank env exports as unset', () => {
-    expect(resolveDirectoryPickerBackend({ ...attended, env: { SSH_CONNECTION: '', SSH_TTY: '' } })).toBe('native')
+    expect(resolveDirectoryPickerBackend({ ...attended, env: { SSH_CONNECTION: '', SSH_TTY: '', DSH_DIRECTORY_PICKER: '' } })).toBe('native')
     expect(resolveDirectoryPickerBackend({
       ...attended, platform: 'linux', linuxChooser: true, env: { DISPLAY: '', WAYLAND_DISPLAY: '' },
     })).toBe('browse')

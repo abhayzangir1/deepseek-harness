@@ -13,7 +13,7 @@ export type DirectoryPickerBackendKind = 'native' | 'browse'
 
 /** Environment keys the resolution reads (a `process.env` subset). */
 export type DirectoryPickerEnv = Readonly<
-  Partial<Record<'SSH_CONNECTION' | 'SSH_TTY' | 'DISPLAY' | 'WAYLAND_DISPLAY', string>>
+  Partial<Record<'SSH_CONNECTION' | 'SSH_TTY' | 'DISPLAY' | 'WAYLAND_DISPLAY' | 'DSH_DIRECTORY_PICKER', string>>
 >
 
 /** Host facts the backend choice is a pure function of, sampled once at boot. */
@@ -34,17 +34,19 @@ const present = (value: string | undefined): boolean => value !== undefined && v
 /**
  * Resolve which backend serves this boot. `native` requires every signal that
  * the operator can see the host display and the native backend can serve it:
- * a loopback-only bind (an all-interfaces bind admits remote browsers no OS
- * chooser can reach), no SSH launch (under SSH port-forwarding the chooser
- * would open on the unattended server), and a servable display session —
- * assumed on darwin/win32, requiring `DISPLAY`/`WAYLAND_DISPLAY` plus a
- * chooser binary on linux, and never true elsewhere (the native backend
- * drives exactly darwin/win32/linux). Anything ambiguous resolves to
- * `browse`, which works everywhere.
+ * an explicit `DSH_DIRECTORY_PICKER` override wins first; then a loopback-only
+ * bind (an all-interfaces bind admits remote browsers no OS chooser can reach),
+ * no SSH launch (under SSH port-forwarding the chooser would open on the
+ * unattended server), and a servable display session — assumed on darwin/win32,
+ * requiring `DISPLAY`/`WAYLAND_DISPLAY` plus a chooser binary on linux, and
+ * never true elsewhere (the native backend drives exactly darwin/win32/linux).
+ * Anything ambiguous resolves to `browse`, which works everywhere.
  * @param facts - the sampled host facts.
  * @returns the backend kind to mount.
  */
 export function resolveDirectoryPickerBackend(facts: DirectoryPickerHostFacts): DirectoryPickerBackendKind {
+  const explicit = facts.env.DSH_DIRECTORY_PICKER?.trim().toLowerCase()
+  if (explicit === 'browse' || explicit === 'native') return explicit
   if (facts.bindHost !== '127.0.0.1') return 'browse'
   if (present(facts.env.SSH_CONNECTION) || present(facts.env.SSH_TTY)) return 'browse'
   if (facts.platform === 'darwin' || facts.platform === 'win32') return 'native'
